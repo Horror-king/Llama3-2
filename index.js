@@ -1,37 +1,38 @@
 const express = require('express');
-const axios = require('axios');
+const Groq = require('groq-sdk');
 
 const app = express();
 const port = 3000;
+const groqApiKey = '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'; // Replace with your actual Groq API key
 
-const accessToken = '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';
+const groq = new Groq({ apiKey: groqApiKey });
 
-app.get('/ai', async (req, res) => {
+app.get('/llama3', async (req, res) => {
     const prompt = req.query.prompt;
-
     if (!prompt) {
-        return res.status(400).send({ error: 'Prompt is required' });
+        return res.status(400).send('Prompt query parameter is required');
     }
 
     try {
-        const response = await axios.post(
-            'https://api-inference.huggingface.co/models/gpt-neo-2.7B', // You can replace this with your desired model endpoint
-            {
-                inputs: prompt,
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            }
-        );
-
-        res.send(response.data);
+        const chatCompletion = await getGroqChatCompletion(prompt);
+        res.json({ response: chatCompletion.choices[0]?.message?.content || '' });
     } catch (error) {
         console.error(error);
-        res.status(500).send({ error: 'Failed to fetch response from Hugging Face API' });
+        res.status(500).send('Error generating response from Groq API');
     }
 });
+
+async function getGroqChatCompletion(prompt) {
+    return groq.chat.completions.create({
+        messages: [
+            {
+                role: 'user',
+                content: prompt,
+            },
+        ],
+        model: 'llama3-8b-8192',
+    });
+}
 
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
